@@ -1,9 +1,8 @@
 /** @type {import('@remix-run/dev').AppConfig} */
 export default {
   ignoredRouteFiles: ["**/.*"],
+  server: './server.ts',
   serverDependenciesToBundle: [
-    "lucia",
-    "@lucia-auth/adapter-prisma",
     "oslo",
   ],
 };

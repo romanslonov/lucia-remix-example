@@ -2,17 +2,19 @@ import {
   ActionFunctionArgs,
   LoaderFunctionArgs,
   MetaFunction,
+  redirect,
 } from "@remix-run/node";
 import { Form, Link, useActionData } from "@remix-run/react";
 import { signup } from "./action.server";
-import { requireGuest } from "~/lib/auth.server";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Sign up" }];
 };
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  await requireGuest(request);
+export async function loader({ context }: LoaderFunctionArgs) {
+  if (context.session) {
+    throw redirect("/");
+  }
 
   return null;
 }

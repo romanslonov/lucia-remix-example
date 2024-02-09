@@ -2,8 +2,8 @@ import { Lucia } from "lucia";
 import { BetterSqlite3Adapter } from "@lucia-auth/adapter-sqlite";
 import { db } from "./db";
 import type { DatabaseUser } from "./db";
-import { parseCookies } from "oslo/cookie";
 import { redirect } from "@remix-run/node";
+import { parseCookies } from "oslo/cookie";
 
 // import { webcrypto } from "crypto";
 // globalThis.crypto = webcrypto as Crypto;
@@ -26,9 +26,17 @@ export const lucia = new Lucia(adapter, {
   },
 });
 
-export function getSessionId(request: Request) {
+export async function logout(request: Request) {
   const cookies = request.headers.get("cookie");
-  return parseCookies(cookies || "").get(lucia.sessionCookieName);
+  const sessionId = parseCookies(cookies || "").get(lucia.sessionCookieName);
+
+  if (!sessionId) {
+    throw redirect("/login");
+  }
+
+  await lucia.invalidateSession(sessionId);
+
+  return destroySession();
 }
 
 export function destroySession() {
@@ -39,58 +47,6 @@ export function destroySession() {
       "Set-Cookie": sessionCookie.serialize(),
     },
   });
-}
-
-export async function requireUser(request: Request) {
-  const sessionId = getSessionId(request);
-
-  if (!sessionId) {
-    throw destroySession();
-  }
-
-  const result = await lucia.validateSession(sessionId);
-
-  if (result.session && result.session.fresh) {
-    const sessionCookie = lucia.createSessionCookie(result.session.id);
-
-    throw redirect(request.url, {
-      headers: {
-        "Set-Cookie": sessionCookie.serialize(),
-      },
-    });
-  }
-
-  if (!result.session) {
-    throw destroySession();
-  }
-
-  return result;
-}
-
-export async function requireGuest(request: Request) {
-  const sessionId = getSessionId(request);
-
-  if (!sessionId) {
-    return;
-  }
-
-  const result = await lucia.validateSession(sessionId);
-
-  if (result.session) {
-    throw redirect("/");
-  }
-}
-
-export async function logout(request: Request) {
-  const sessionId = getSessionId(request);
-
-  if (!sessionId) {
-    throw redirect("/login");
-  }
-
-  await lucia.invalidateSession(sessionId);
-
-  return destroySession();
 }
 
 declare module "lucia" {
